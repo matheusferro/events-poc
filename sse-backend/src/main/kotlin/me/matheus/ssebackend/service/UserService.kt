@@ -1,5 +1,6 @@
 package me.matheus.ssebackend.service
 
+import me.matheus.ssebackend.api.request.CreateUserRequest
 import me.matheus.ssebackend.domain.User
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -19,5 +20,12 @@ class UserService {
     fun getAllUsers(): Flux<User> {
         logger.info("returning users")
         return Flux.fromArray(users.toTypedArray())
+    }
+
+    fun createNewUser(createUserRequest: CreateUserRequest): Mono<User> {
+        val user = User(users[users.lastIndex].id + 1, createUserRequest)
+        logger.info("creating user ${user.id}")
+        users.add(user)
+        return Mono.just(user)
     }
 }
