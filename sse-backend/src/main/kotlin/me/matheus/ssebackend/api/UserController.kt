@@ -42,7 +42,27 @@ class UserController(
             }
         }
 
+    @GetMapping("/updated-stream-sse", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun getNewUsersStreamSSE(): Flux<ServerSentEvent<UserResponse>> =
+        Flux.zip(
+            Flux.interval(Duration.ofMillis(5000)),
+            Flux.fromStream(Stream.generate { userService.getAllUsers() })
+        ).flatMap { obj: Tuple2<Long?, Flux<User>> ->
+            obj.t2.map {
+                println("returning ${it.id}")
+                buildUserCreatedSSE(it.id, it.name)
+            }
+        }
+
     @PutMapping
     fun putNewUser(@RequestBody createUserRequest: CreateUserRequest): Mono<User> =
         userService.createNewUser(createUserRequest)
+
+    private fun buildUserCreatedSSE(id: Long, name: String) =
+        ServerSentEvent.builder<UserResponse>()
+            .id(UUID.randomUUID().toString())
+            .event("USER_CREATED")
+            .data(UserResponse(id, name))
+            .retry(Duration.ofSeconds(3))
+            .build()
 }
