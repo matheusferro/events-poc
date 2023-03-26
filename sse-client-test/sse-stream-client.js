@@ -1,6 +1,7 @@
-var EventSource = require("eventsource")
+const config = require('./commons.js');
+const EventSource = require("eventsource");
 
-var sseClient = new EventSource("http://localhost:8080/user/updated-stream-sse", { withCredentials: false });
+var sseClient = new EventSource(config.DEFAULT_URL + "/user/updated-stream-sse", config.EVENTSOURCE_OPTS);
 
 sseClient.onmessage = (e) => {
     console.log("--- Received a new message ---");
