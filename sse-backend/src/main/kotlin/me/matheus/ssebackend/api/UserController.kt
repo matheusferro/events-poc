@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import reactor.util.function.Tuple2
 import java.time.Duration
 import java.util.UUID
@@ -24,6 +25,8 @@ import java.util.stream.Stream
 class UserController(
     private val userService: UserService
 ) {
+
+    private val sinks = Sinks.many().multicast().directAllOrNothing<User>()
 
     @GetMapping
     fun getAllUsers(): Flux<UserResponse> = userService.getAllUsers().map {
@@ -54,9 +57,20 @@ class UserController(
             }
         }
 
+    @GetMapping("/updated-sse", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun getNewUserSSE(): Flux<ServerSentEvent<UserResponse>> {
+        return sinks
+            .asFlux()
+            .map {
+                println("returning ${it.id}")
+                buildUserCreatedSSE(it.id, it.name)
+            }
+    }
+
     @PutMapping
     fun putNewUser(@RequestBody createUserRequest: CreateUserRequest): Mono<User> =
         userService.createNewUser(createUserRequest)
+            .doOnNext(sinks::tryEmitNext)
 
     private fun buildUserCreatedSSE(id: Long, name: String) =
         ServerSentEvent.builder<UserResponse>()
